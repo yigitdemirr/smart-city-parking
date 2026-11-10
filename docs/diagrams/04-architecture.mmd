@@ -1,0 +1,36 @@
+%% Architecture - request path from the lecture: device -> base station -> service -> database
+flowchart TB
+    subgraph MOB["Mobile client - Flutter (Android)"]
+        direction LR
+        UI["UI screens<br/>search, spaces, reservation,<br/>history, admin"]
+        LOC["Location module<br/>mixed INFORM rule:<br/>100 m OR 60 s"]
+        VM["State / view models<br/>online-offline state,<br/>stale labels"]
+        API["API client<br/>timeouts, retry with<br/>SAME operationId"]
+        CACHE[("Local cache - SQLite<br/>last search, history,<br/>generatedAt")]
+        PEND[("Pending operations<br/>operationId + request")]
+        UI --> VM
+        LOC --> VM
+        VM <--> CACHE
+        VM --> API
+        API <--> PEND
+    end
+
+    BS(("Wireless link / base station<br/>loss, delay, handover"))
+
+    subgraph SRV["Web service - Python FastAPI, REST/JSON, JWT"]
+        direction LR
+        AUTH["Auth"]
+        SEARCH["Search<br/>haversine distance"]
+        RES["Reservations<br/>hold / cancel"]
+        PAY["Simulated<br/>payments"]
+        OPS["Operations<br/>idempotency + status<br/>(used by Reservations, Payments)"]
+        ADM["Admin<br/>facilities, spaces"]
+        JOB["Expiry job<br/>every 30 s"]
+        AUTH ~~~ SEARCH ~~~ RES ~~~ PAY ~~~ OPS ~~~ ADM ~~~ JOB
+    end
+
+    DB[("PostgreSQL 16 - authoritative state<br/>EXCLUDE / UNIQUE / CHECK constraints")]
+
+    MOB <-- "HTTPS (wireless segment)" --> BS
+    BS <-- "fixed network" --> SRV
+    SRV --> DB

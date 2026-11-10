@@ -1,0 +1,12 @@
+%% Reservation life cycle (server-side authoritative states)
+stateDiagram-v2
+    [*] --> HELD : POST /reservations (operationId)
+    HELD --> CONFIRMED : simulated payment SUCCEEDED before holdExpiresAt
+    HELD --> HELD : payment DECLINED (retry allowed until expiry)
+    HELD --> EXPIRED : holdExpiresAt passed (expiry job / lazy check)
+    HELD --> CANCELLED : driver cancels
+    CONFIRMED --> CANCELLED : driver cancels before startTime
+    CONFIRMED --> COMPLETED : endTime passed
+    EXPIRED --> [*]
+    CANCELLED --> [*]
+    COMPLETED --> [*]

@@ -1,0 +1,28 @@
+%% Use-case diagram - Smart City Parking (Project B)
+%% Actors are drawn as rounded nodes; use cases as stadium nodes inside the system boundary.
+flowchart LR
+    driver(["👤 Driver"])
+    admin(["👤 Administrator"])
+
+    subgraph SYS["Smart City Parking System"]
+        UC1(["UC1 Register"])
+        UC2(["UC2 Log in / log out"])
+        UC3(["UC3 Search nearest available parking"])
+        UC4(["UC4 View facility and free spaces"])
+        UC5(["UC5 Hold (temporarily block) a space"])
+        UC6(["UC6 Pay for reservation (simulated)"])
+        UC7(["UC7 Cancel reservation"])
+        UC8(["UC8 View reservation history"])
+        UC9(["UC9 Check operation status after lost response"])
+        UC10(["UC10 Manage facilities and spaces"])
+        UC11(["UC11 Expire unpaid holds"])
+    end
+
+    gps(["📡 Device location (GPS)"])
+    timer(["⏱ System timer"])
+
+    driver --- UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7 & UC8
+    admin --- UC2 & UC10
+    UC3 --- gps
+    UC9 -. "«extend» on timeout of UC5 / UC6 / UC7" .- UC5
+    UC11 --- timer

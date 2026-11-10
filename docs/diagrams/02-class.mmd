@@ -1,0 +1,103 @@
+%% Class diagram - domain model and main responsibilities
+classDiagram
+    direction TB
+    class User {
+        +UUID id
+        +String email
+        +String passwordHash
+        +String displayName
+        +Role role
+        +Instant createdAt
+    }
+    class ParkingFacility {
+        +UUID id
+        +String name
+        +String address
+        +Decimal latitude
+        +Decimal longitude
+        +DataSource dataSource
+        +boolean isActive
+        +distanceTo(Position p) double
+    }
+    class ParkingSpace {
+        +UUID id
+        +String label
+        +SpaceType type
+        +Decimal pricePerHour
+        +boolean isActive
+        +int version
+    }
+    class Reservation {
+        +UUID id
+        +ReservationStatus status
+        +Instant startTime
+        +Instant endTime
+        +Instant holdExpiresAt
+        +Decimal totalAmount
+        +confirm(Payment p)
+        +cancel()
+        +expire()
+        +isHoldExpired(Instant now) boolean
+    }
+    class Payment {
+        +UUID id
+        +Decimal amount
+        +String currency
+        +PaymentStatus status
+        +boolean isSimulated = true
+    }
+    class Operation {
+        +UUID operationId
+        +OperationType type
+        +String requestHash
+        +Outcome outcome
+        +int httpStatus
+        +Json responseBody
+    }
+    class Position {
+        <<value object>>
+        +double latitude
+        +double longitude
+        +double accuracyM
+        +Instant observedAt
+        +isStale(Instant now) boolean
+    }
+    class ReservationStatus {
+        <<enumeration>>
+        HELD
+        CONFIRMED
+        EXPIRED
+        CANCELLED
+        COMPLETED
+    }
+
+    User "1" --> "0..*" Reservation : makes
+    User "1" --> "0..*" Operation : issues
+    ParkingFacility "1" *-- "1..*" ParkingSpace : contains
+    ParkingSpace "1" --> "0..*" Reservation : booked by
+    Reservation "1" --> "0..*" Payment : paid by
+    Operation "1" --> "0..1" Reservation : created
+    Operation "1" --> "0..1" Payment : created
+    Reservation ..> ReservationStatus
+    ParkingFacility ..> Position : distance from
+
+    class SearchService {
+        +findNearby(Position p, radiusM, from, to) NearbyResult
+    }
+    class ReservationService {
+        +hold(userId, operationId, spaceId, from, to) Reservation
+        +cancel(userId, operationId, reservationId) Reservation
+        +expireDueHolds(now) int
+    }
+    class PaymentService {
+        +paySimulated(userId, operationId, reservationId, outcome) Payment
+    }
+    class OperationService {
+        +runOnce(operationId, userId, type, body, action) StoredResponse
+        +find(operationId, userId) Operation
+    }
+    ReservationService ..> OperationService : uses
+    PaymentService ..> OperationService : uses
+    ReservationService ..> Reservation
+    PaymentService ..> Payment
+    SearchService ..> ParkingFacility

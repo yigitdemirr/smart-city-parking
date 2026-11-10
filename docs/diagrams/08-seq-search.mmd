@@ -1,0 +1,25 @@
+%% Location-dependent query: nearest available parking
+sequenceDiagram
+    autonumber
+    actor D as Driver
+    participant App as Mobile app
+    participant S as Web service
+    participant DB as PostgreSQL
+
+    D->>App: Open "Find parking" for 10:00-12:00
+    App->>App: Get GPS fix (lat, lon, accuracy, observedAt)
+    alt fix older than 2 min or accuracy > 100 m
+        App->>App: request fresh fix (max 5 s), else use last fix + warning
+    end
+    App->>S: GET /facilities/nearby?lat&lon&observedAt&radiusM=1000&from&to
+    S->>DB: active facilities in bounding box + free spaces for period
+    DB-->>S: rows
+    S->>S: haversine distance, filter radius, sort ascending
+    S-->>App: 200 {query{position, observedAt, distanceModel}, generatedAt, results}
+    App->>App: cache results with generatedAt
+    opt driver moved > 100 m since observedAt (migration of response)
+        App->>App: discard outdated result
+        App->>S: reissue GET /facilities/nearby with the new fix
+        S-->>App: 200 new results
+    end
+    App-->>D: list "based on your position at 09:41, updated 09:41"

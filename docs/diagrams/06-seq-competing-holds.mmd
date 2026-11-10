@@ -1,0 +1,21 @@
+%% Competing data-changing requests for the same space and period
+sequenceDiagram
+    autonumber
+    participant A as Driver A app
+    participant B as Driver B app
+    participant S as Web service
+    participant DB as PostgreSQL
+
+    par nearly simultaneous
+        A->>S: POST /reservations space A-01 10:00-12:00 (op-A)
+    and
+        B->>S: POST /reservations space A-01 11:00-13:00 (op-B)
+    end
+    S->>DB: TX A: insert reservation HELD
+    S->>DB: TX B: insert reservation HELD
+    DB-->>S: TX A committed
+    DB-->>S: TX B exclusion_violation (period overlaps)
+    S->>DB: store op-B as REJECTED 409
+    S-->>A: 201 HELD, holdExpiresAt 10:12
+    S-->>B: 409 SPACE_UNAVAILABLE + alternative free spaces
+    Note over B: B retries op-B -> same 409 replayed, no new attempt

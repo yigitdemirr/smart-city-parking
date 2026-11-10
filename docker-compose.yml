@@ -1,0 +1,17 @@
+# Reproducible database startup for development (M1).
+# The web service container will be added in Lab 5.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: parking
+      POSTGRES_USER: parking
+      POSTGRES_PASSWORD: parking_dev_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

@@ -1,0 +1,29 @@
+%% Data flow: hold a space when the response is lost (processing succeeded, delivery failed)
+sequenceDiagram
+    autonumber
+    actor D as Driver
+    participant App as Mobile app
+    participant BS as Base station / wireless
+    participant S as Web service
+    participant DB as PostgreSQL
+
+    D->>App: Tap "Hold space A-01, 10:00-12:00"
+    App->>App: operationId = UUIDv4, save to pending store
+    App->>BS: POST /reservations (Idempotency-Key: operationId)
+    BS->>S: request
+    S->>DB: BEGIN, insert operation + reservation(HELD), COMMIT
+    DB-->>S: committed
+    S--xBS: 201 Created (response LOST - link dropped)
+    App->>App: timeout after 10 s, show "Checking your reservation..."
+    Note over App: Do NOT create a new operationId
+    App->>BS: (reconnected) GET /operations/{operationId}
+    BS->>S: request
+    S->>DB: SELECT operation
+    DB-->>S: SUCCEEDED, stored 201 body
+    S-->>App: 200 {outcome: SUCCEEDED, response: reservation HELD}
+    App->>App: remove from pending store, update cache
+    App-->>D: "Space A-01 is held until 10:12 - pay to confirm"
+    alt operation not found (404)
+        App->>S: POST /reservations again with SAME operationId
+        S-->>App: 201 (first execution) or stored response (replay)
+    end
